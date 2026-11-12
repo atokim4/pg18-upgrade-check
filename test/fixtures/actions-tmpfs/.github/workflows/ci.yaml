@@ -1,0 +1,13 @@
+name: ci
+on: pull_request
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: --tmpfs /var/lib/postgresql/data --health-cmd pg_isready
+    steps:
+      - run: echo ok

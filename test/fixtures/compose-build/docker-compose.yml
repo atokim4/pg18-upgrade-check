@@ -1,0 +1,10 @@
+services:
+  gis:
+    build:
+      context: ./db
+    ports:
+      - "5432:5432"
+    volumes:
+      - gisdata:/var/lib/postgresql/data
+volumes:
+  gisdata:

@@ -1,0 +1,40 @@
+{
+  "name": "pg18-upgrade-check",
+  "version": "0.1.0",
+  "description": "Offline preflight for moving Docker/Kubernetes/CI Postgres to 18: catches the /var/lib/postgresql/data volume trap, major bumps on existing volumes, and the data-checksums mismatch, plus a read-only SQL preflight for the old cluster.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Sunnatulla E",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "pg18-upgrade-check": "dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "sql",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsx src/cli.ts",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "eslint": "10.14.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.1.0"
+  },
+  "keywords": ["postgres", "postgresql", "docker", "docker-compose", "kubernetes", "pg_upgrade", "renovate", "postgres-18", "preflight"]
+}

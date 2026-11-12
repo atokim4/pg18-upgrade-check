@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_PASSWORD: example
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  web:
+    image: node:24
+volumes:
+  pgdata:

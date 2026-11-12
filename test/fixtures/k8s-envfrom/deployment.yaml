@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+spec:
+  template:
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: db-data
+      containers:
+        - name: db
+          image: timescale/timescaledb:2.23.0-pg18
+          envFrom:
+            - configMapRef:
+                name: db-env
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data

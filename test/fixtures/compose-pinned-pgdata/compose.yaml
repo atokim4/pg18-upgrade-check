@@ -1,0 +1,12 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      - POSTGRES_PASSWORD=example
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - type: volume
+        source: pgdata
+        target: /var/lib/postgresql/data
+volumes:
+  pgdata:

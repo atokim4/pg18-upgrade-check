@@ -1,0 +1,7 @@
+services:
+  db:
+    image: bitnami/postgresql:18
+    volumes:
+      - pg:/bitnami/postgresql
+volumes:
+  pg:

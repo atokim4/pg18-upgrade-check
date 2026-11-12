@@ -1,0 +1,12 @@
+services:
+  vector:
+    image: pgvector/pgvector:0.8.1-pg18-trixie
+    volumes:
+      - vector:/var/lib/postgresql
+  timescale:
+    image: timescale/timescaledb:latest-pg17
+    volumes:
+      - ts:/var/lib/postgresql/data
+volumes:
+  vector:
+  ts:

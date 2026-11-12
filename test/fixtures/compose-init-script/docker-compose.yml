@@ -1,0 +1,9 @@
+# Sample: only an init script is mounted, the data stays in the image's own volume (a throwaway dev DB).
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: sample
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backups:/backups
