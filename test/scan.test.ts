@@ -56,12 +56,32 @@ describe('data-mount: something mounted at /var/lib/postgresql/data on an 18 ima
     expect(rules(fixture('dockerfile-volume'))).toEqual([['data-mount', 'error', 3]]);
   });
 
+  it('Kubernetes native sidecar (initContainer with restartPolicy: Always); a plain init container is not a database', () => {
+    const result = scan(fixture('k8s-sidecar'));
+    expect(result.targets.map((t) => t.name)).toEqual(['Deployment/app/postgres']);
+    expect(result.findings.map((f) => [f.rule, f.severity, f.line])).toEqual([['data-mount', 'error', 16]]);
+  });
+
   it('Helm values are a hint only', () => {
     expect(rules(fixture('helm-values'))).toEqual([['data-mount', 'warning', 8]]);
+  });
+
+  it('Helm chart whose template mounts the old path (templates read as text)', () => {
+    const result = scan(fixture('helm-chart-template'));
+    expect(result.findings.map((f) => [f.rule, f.severity, f.file, f.line])).toEqual([
+      ['data-mount', 'warning', 'templates/statefulset.yaml', 14],
+    ]);
+    expect(result.findings[0]?.message).toContain('chart template templates/statefulset.yaml');
+    expect(result.unreadable).toEqual([]);
+    expect(result.helmTemplates).toBe(1);
   });
 });
 
 describe('no false positives', () => {
+  it('Helm chart template that sets PGDATA', () => {
+    expect(rules(fixture('helm-chart-template-pgdata'))).toEqual([]);
+  });
+
   it('PGDATA pinned to the old path', () => {
     expect(rules(fixture('compose-pinned-pgdata'))).toEqual([]);
   });

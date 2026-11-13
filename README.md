@@ -50,8 +50,9 @@ Two things changed in Postgres 18 that a one-line tag bump does not handle:
 
 Sources it reads: `docker-compose*.yml` / `compose*.yaml` (with `.env` interpolation, `env_file`
 and `build:` Dockerfiles), Kubernetes manifests (Deployments, StatefulSets with
-`volumeClaimTemplates`, `envFrom`), Helm `values*.yaml`, GitHub Actions `services:`, and
-Dockerfiles. Images it understands: `postgres`, `postgis/postgis`, `pgvector/pgvector`,
+`volumeClaimTemplates`, `envFrom`, native sidecars in `initContainers`), Helm `values*.yaml` (plus the chart's `templates/`, read as
+text for `mountPath` and `PGDATA` because Go templates are not YAML), GitHub Actions `services:`,
+and Dockerfiles. Images it understands: `postgres`, `postgis/postgis`, `pgvector/pgvector`,
 `timescale/timescaledb`, from any registry, with or without digests.
 
 Things it stays quiet about on purpose:
@@ -154,6 +155,8 @@ scripts/upgrade-repro.sh /tmp/pgbin /tmp/pgwork | tee transcript.txt
 
 The servers run with `jit=off` because the fetch script leaves out the LLVM library.
 `transcripts/14-to-18.txt` is one full run (14.24 → 18.6, 12 million sample rows, 2 vCPUs).
+`transcripts/17-data-on-18.txt` shows an 18.7 server refusing a 17 data directory, and
+`transcripts/renovate-scan-2026-11-13.md` is the tool run on 20 open Renovate "postgres to v18" PRs.
 
 ## Development
 

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait
+          image: postgres:18-alpine
+          command: ["sh", "-c", "until pg_isready -h db; do sleep 1; done"]
+        - name: postgres
+          image: postgres:18-alpine
+          restartPolicy: Always
+          volumeMounts:
+            - name: db
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: app
+          image: example/app:1.0
+      volumes:
+        - name: db
+          persistentVolumeClaim:
+            claimName: app-db

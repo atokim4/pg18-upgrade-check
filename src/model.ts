@@ -12,6 +12,8 @@ export interface Mount {
   /** Data survives a container being recreated (named volume, bind mount, PVC, host path). */
   persistent: boolean;
   line: number;
+  /** Set when the mount is declared in another file than the target (a Helm chart template). */
+  file?: string;
 }
 
 /** One Postgres container definition found in a file. */
@@ -67,6 +69,8 @@ export interface ScanResult {
   filesScanned: number;
   /** Files (or YAML documents in them) skipped because they did not parse. */
   unreadable: FileProblem[];
+  /** Helm chart templates (Go-template YAML): read as text for mounts and PGDATA, not parsed. */
+  helmTemplates: number;
   targets: PostgresTarget[];
   findings: Finding[];
 }

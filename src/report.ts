@@ -25,7 +25,8 @@ export function formatText(result: ScanResult, opts: { color: boolean; showInfo:
   };
   const lines: string[] = [];
   const pg18 = result.targets.filter((t) => t.image.major !== null && t.image.major >= 18 && t.image.layout === 'official').length;
-  lines.push(`Scanned ${plural(result.filesScanned, 'file')}: ${plural(result.targets.length, 'Postgres container')}, ${pg18} on 18+.`);
+  const tpl = result.helmTemplates > 0 ? ` ${plural(result.helmTemplates, 'Helm template')} read as text for mounts.` : '';
+  lines.push(`Scanned ${plural(result.filesScanned, 'file')}: ${plural(result.targets.length, 'Postgres container')}, ${pg18} on 18+.${tpl}`);
 
   for (const u of result.unreadable) {
     lines.push('');
@@ -59,6 +60,7 @@ export function formatJson(result: ScanResult): string {
       filesScanned: result.filesScanned,
       summary: counts(result.findings),
       unreadable: result.unreadable,
+      helmTemplates: result.helmTemplates,
       targets: result.targets.map((t) => ({
         file: t.file,
         line: t.line,

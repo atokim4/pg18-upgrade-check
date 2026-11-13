@@ -1,0 +1,5 @@
+image:
+  repository: library/postgres
+  tag: "18"
+persistence:
+  size: 5Gi

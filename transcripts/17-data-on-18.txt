@@ -1,0 +1,8 @@
+### initdb with 17, then start 18 on the same directory (run 2026-11-13)
+postgres (PostgreSQL) 17.12 (Debian 17.12-1.pgdg12+1)
+postgres (PostgreSQL) 18.7 (Debian 18.7-1.pgdg12+2)
+initdb 17: ok, PG_VERSION=17
+$ postgres (18) -D data
+2026-11-13 13:23:41.663 +05 [13522] FATAL:  database files are incompatible with server
+2026-11-13 13:23:41.663 +05 [13522] DETAIL:  The data directory was initialized by PostgreSQL version 17, which is not compatible with this version 18.7 (Debian 18.7-1.pgdg12+2).
+exit 1

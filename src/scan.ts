@@ -1,12 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { basename, join, relative, resolve, sep } from 'node:path';
+import { basename, join, posix, relative, resolve, sep } from 'node:path';
 import type { FileProblem, PostgresTarget, ScanResult, SourceKind } from './model.js';
 import { evaluate } from './rules.js';
 import { actionsTargets } from './sources/actions.js';
 import { composeTargets } from './sources/compose.js';
 import { dockerfileTargets } from './sources/dockerfile.js';
-import { helmTargets } from './sources/helm.js';
+import { applyTemplateMounts, helmTargets, isHelmTemplate, type ChartTemplate } from './sources/helm.js';
 import { kubernetesTargets, looksLikeKubernetes } from './sources/kubernetes.js';
 import { firstYamlError, type Snapshot } from './sources/util.js';
 
@@ -102,6 +102,7 @@ export function scan(path: string, options: ScanOptions = {}): ScanResult {
 
   const targets: PostgresTarget[] = [];
   const unreadable: FileProblem[] = [];
+  const templates = new Map<string, ChartTemplate[]>();
   let filesScanned = 0;
   for (const file of files) {
     let cached: string | null | undefined;
@@ -110,6 +111,11 @@ export function scan(path: string, options: ScanOptions = {}): ScanResult {
     if (!kind) continue;
     if (text() === '') continue;
     filesScanned++;
+    if (isHelmTemplate(file, text())) {
+      const chartDir = file.replace(/(^|\/)templates\/.*$/, '');
+      templates.set(chartDir, [...(templates.get(chartDir) ?? []), { file, text: text() }]);
+      continue;
+    }
     if (kind !== 'dockerfile') {
       const err = firstYamlError(text());
       if (err) unreadable.push({ file, ...err });
@@ -128,6 +134,13 @@ export function scan(path: string, options: ScanOptions = {}): ScanResult {
     targets.push(...found);
   }
 
+  for (const t of targets) {
+    if (t.kind !== 'helm-values') continue;
+    const chartTemplates = templates.get(posix.dirname(t.file) === '.' ? '' : posix.dirname(t.file));
+    if (chartTemplates) applyTemplateMounts(t, chartTemplates);
+  }
+
+  const helmTemplates = [...templates.values()].reduce((n, list) => n + list.length, 0);
   const findings = targets.flatMap(evaluate);
-  return { root, filesScanned, unreadable, targets, findings };
+  return { root, filesScanned, unreadable, helmTemplates, targets, findings };
 }
