@@ -27,6 +27,13 @@ export function formatText(result: ScanResult, opts: { color: boolean; showInfo:
   const pg18 = result.targets.filter((t) => t.image.major !== null && t.image.major >= 18 && t.image.layout === 'official').length;
   lines.push(`Scanned ${plural(result.filesScanned, 'file')}: ${plural(result.targets.length, 'Postgres container')}, ${pg18} on 18+.`);
 
+  for (const u of result.unreadable) {
+    lines.push('');
+    lines.push(`${paint('33;1', 'SKIP   ')}${u.file}:${u.line}  not valid YAML: ${u.message}`);
+    lines.push('  Postgres services in it were not checked. If Compose itself loads the file,');
+    lines.push('  `docker compose -f <file> config > compose.rendered.yml` writes a normalised copy this tool can read.');
+  }
+
   const shown = sortFindings(result.findings).filter((f) => opts.showInfo || f.severity !== 'info');
   for (const f of shown) {
     lines.push('');
@@ -39,8 +46,9 @@ export function formatText(result: ScanResult, opts: { color: boolean; showInfo:
   }
   const c = counts(result.findings);
   lines.push('');
-  if (c.error === 0 && c.warning === 0) lines.push(paint('32', 'No Postgres 18 data-directory problems found.'));
-  else lines.push(`${plural(c.error, 'error')}, ${plural(c.warning, 'warning')}.`);
+  const skipped = result.unreadable.length > 0 ? ` ${plural(result.unreadable.length, 'file')} could not be read.` : '';
+  if (c.error === 0 && c.warning === 0) lines.push(paint('32', 'No Postgres 18 data-directory problems found.') + skipped);
+  else lines.push(`${plural(c.error, 'error')}, ${plural(c.warning, 'warning')}.${skipped}`);
   return lines.join('\n');
 }
 
@@ -50,6 +58,7 @@ export function formatJson(result: ScanResult): string {
       root: result.root,
       filesScanned: result.filesScanned,
       summary: counts(result.findings),
+      unreadable: result.unreadable,
       targets: result.targets.map((t) => ({
         file: t.file,
         line: t.line,

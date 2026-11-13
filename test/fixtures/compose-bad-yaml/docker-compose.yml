@@ -1,0 +1,13 @@
+services:
+  api:
+    image: example/api:1
+    environment:
+      APP_JSON: '{
+        "db": "postgres://db:5432/app"
+      }'
+  db:
+    image: postgres:18
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

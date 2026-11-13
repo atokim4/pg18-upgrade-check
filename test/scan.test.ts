@@ -150,3 +150,51 @@ describe('major bump against a git base (the Renovate PR case)', () => {
     expect(() => scan(d, { base: 'no-such-ref' })).toThrow();
   });
 });
+
+describe('env_file that is not in the repo', () => {
+  function withTemplate(template: string | null, fn: (dir: string) => void): void {
+    const dir = mkdtempSync(join(tmpdir(), 'pg18-tpl-'));
+    try {
+      cpSync(fixture('compose-env-template'), dir, { recursive: true });
+      if (template !== null) writeFileSync(join(dir, '.env.example'), template);
+      fn(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it('without a template: a warning that names the missing file; PGDATA in environment: wins and is clean', () => {
+    withTemplate(null, (dir) => {
+      const result = scan(dir);
+      expect(result.findings.map((f) => [f.rule, f.severity, f.target])).toEqual([['data-mount', 'warning', 'db']]);
+      expect(result.findings[0]?.message).toContain('PGDATA may be set in .env, which is not in the repo');
+    });
+  });
+
+  it('reads the committed .env.example in its place', () => {
+    withTemplate('POSTGRES_USER=app\n', (dir) => {
+      const result = scan(dir);
+      expect(result.findings.map((f) => [f.rule, f.severity, f.target])).toEqual([['data-mount', 'error', 'db']]);
+      expect(result.findings[0]?.message).toContain('env_file read from .env.example');
+    });
+  });
+
+  it('a template that pins PGDATA keeps the old layout working', () => {
+    withTemplate('PGDATA=/var/lib/postgresql/data\n', (dir) => {
+      expect(scan(dir).findings).toEqual([]);
+    });
+  });
+});
+
+describe('files that are not valid YAML', () => {
+  it('are listed as unreadable instead of being skipped silently', () => {
+    const result = scan(fixture('compose-bad-yaml'));
+    expect(result.targets).toEqual([]);
+    expect(result.unreadable.map((u) => [u.file, u.line])).toEqual([['docker-compose.yml', 6]]);
+    expect(result.unreadable[0]?.message).toContain("Missing closing 'quote");
+  });
+
+  it('valid files report nothing unreadable', () => {
+    expect(scan(fixture('compose-old-mount')).unreadable).toEqual([]);
+  });
+});

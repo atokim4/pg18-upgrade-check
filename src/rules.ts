@@ -73,9 +73,16 @@ const MOUNT_LABEL: Record<MountKind, string> = {
 };
 
 function unsureNote(t: PostgresTarget): string {
-  return t.kind === 'helm-values'
-    ? ' The chart templates may set PGDATA; check the rendered manifest (helm template).'
-    : ' PGDATA may be set in a file or ConfigMap this tool cannot read; check it.';
+  if (t.kind === 'helm-values') return ' The chart templates may set PGDATA; check the rendered manifest (helm template).';
+  if (t.missingEnvFiles?.length) {
+    const files = t.missingEnvFiles.join(', ');
+    return ` PGDATA may be set in ${files}, which is not in the repo; if it is not set there, this fails as described.`;
+  }
+  return ' PGDATA may be set in a file or ConfigMap this tool cannot read; check it.';
+}
+
+function templateNote(t: PostgresTarget): string {
+  return t.envTemplates?.length ? ` (env_file read from ${t.envTemplates.join(', ')}, the committed template)` : '';
 }
 
 function dataMount(t: PostgresTarget, major: number, mount: Mount): Finding {
@@ -93,7 +100,7 @@ function dataMount(t: PostgresTarget, major: number, mount: Mount): Finding {
     ...where(t),
     line: mount.line,
     message:
-      `${t.image.raw} keeps its data in /var/lib/postgresql/${major}/docker, but a ${MOUNT_LABEL[mount.kind]} is mounted at ${OLD_DATA_PATH}. ` +
+      `${t.image.raw} keeps its data in /var/lib/postgresql/${major}/docker${templateNote(t)}, but a ${MOUNT_LABEL[mount.kind]} is mounted at ${OLD_DATA_PATH}. ` +
       'On a first start the entrypoint sees that mount and exits before initdb ' +
       '("Error: in 18+, these Docker images are configured to store database data in a format which is compatible with pg_ctlcluster ...").' +
       (unsure ? unsureNote(t) : ''),

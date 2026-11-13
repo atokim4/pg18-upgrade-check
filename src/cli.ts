@@ -20,7 +20,7 @@ Options:
                        the way a Renovate "postgres to v18" PR makes them
   --from <major>       assume every container ran this major before (no git needed)
   --json               machine-readable output
-  --strict             exit 1 on warnings too, not only errors
+  --strict             exit 1 on warnings and unreadable YAML files too, not only errors
   --verbose            also print info findings (skipped images)
   --no-color           plain text output
   -h, --help           show this help
@@ -96,7 +96,7 @@ export function run(argv: string[], io: CliIO): number {
 
   io.out(values.json ? formatJson(result) : formatText(result, { color: io.isTTY && !values['no-color'] && !process.env.NO_COLOR, showInfo: values.verbose }));
   const c = counts(result.findings);
-  return c.error > 0 || (values.strict && c.warning > 0) ? EXIT.findings : EXIT.ok;
+  return c.error > 0 || (values.strict && (c.warning > 0 || result.unreadable.length > 0)) ? EXIT.findings : EXIT.ok;
 }
 
 function isMain(): boolean {

@@ -62,7 +62,14 @@ Things it stays quiet about on purpose:
 - A mount at `/var/lib/postgresql` (the 18 layout).
 
 When `PGDATA` may come from somewhere it cannot read (a missing `env_file`, `envFrom`, chart
-templates), errors are downgraded to warnings and the message says so.
+templates), errors are downgraded to warnings and the message says so. A gitignored `env_file`
+with a committed template next to it (`.env.example`, `.env.sample`, `env.example`...) is read
+from the template instead, and the message names the template it used.
+
+A YAML file that does not parse is listed as `SKIP` with the line of the syntax error (and under
+`unreadable` in `--json`), so a service in it is never skipped without a word. If Compose itself
+loads the file, `docker compose -f <file> config > compose.rendered.yml` writes a normalised copy
+the tool can read.
 
 ## Usage
 
@@ -83,7 +90,7 @@ pg18-upgrade-check [path] [options]
                        the way a Renovate "postgres to v18" PR makes them
   --from <major>       assume every container ran this major before (no git needed)
   --json               machine-readable output
-  --strict             exit 1 on warnings too, not only errors
+  --strict             exit 1 on warnings and unreadable YAML files too, not only errors
   --verbose            also print info findings (skipped images)
   --no-color           plain text output
 ```

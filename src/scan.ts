@@ -1,14 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, relative, resolve, sep } from 'node:path';
-import type { PostgresTarget, ScanResult, SourceKind } from './model.js';
+import type { FileProblem, PostgresTarget, ScanResult, SourceKind } from './model.js';
 import { evaluate } from './rules.js';
 import { actionsTargets } from './sources/actions.js';
 import { composeTargets } from './sources/compose.js';
 import { dockerfileTargets } from './sources/dockerfile.js';
 import { helmTargets } from './sources/helm.js';
 import { kubernetesTargets, looksLikeKubernetes } from './sources/kubernetes.js';
-import type { Snapshot } from './sources/util.js';
+import { firstYamlError, type Snapshot } from './sources/util.js';
 
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'vendor', 'dist', 'build', '.next', '.venv', 'venv', '__pycache__', 'target', '.terraform']);
 const MAX_FILE_BYTES = 1024 * 1024;
@@ -101,6 +101,7 @@ export function scan(path: string, options: ScanOptions = {}): ScanResult {
   const base = options.base === undefined ? null : gitSnapshot(root, options.base);
 
   const targets: PostgresTarget[] = [];
+  const unreadable: FileProblem[] = [];
   let filesScanned = 0;
   for (const file of files) {
     let cached: string | null | undefined;
@@ -109,6 +110,10 @@ export function scan(path: string, options: ScanOptions = {}): ScanResult {
     if (!kind) continue;
     if (text() === '') continue;
     filesScanned++;
+    if (kind !== 'dockerfile') {
+      const err = firstYamlError(text());
+      if (err) unreadable.push({ file, ...err });
+    }
     const found = targetsFor(kind, file, text(), current);
     if (base) {
       const oldText = base.read(file);
@@ -124,5 +129,5 @@ export function scan(path: string, options: ScanOptions = {}): ScanResult {
   }
 
   const findings = targets.flatMap(evaluate);
-  return { root, filesScanned, targets, findings };
+  return { root, filesScanned, unreadable, targets, findings };
 }

@@ -35,6 +35,16 @@ describe('cli', () => {
     expect(parsed.findings[0]?.rule).toBe('data-mount');
   });
 
+  it('names a file it could not parse; --strict fails on it', () => {
+    const r = cli(fixture('compose-bad-yaml'));
+    expect(r.code).toBe(EXIT.ok);
+    expect(r.out).toContain('SKIP   docker-compose.yml:6  not valid YAML');
+    expect(r.out).toContain('1 file could not be read.');
+    expect(cli(fixture('compose-bad-yaml'), '--strict').code).toBe(EXIT.findings);
+    const json = JSON.parse(cli(fixture('compose-bad-yaml'), '--json').out) as { unreadable: Array<{ file: string }> };
+    expect(json.unreadable.map((u) => u.file)).toEqual(['docker-compose.yml']);
+  });
+
   it('usage errors exit 2', () => {
     expect(cli('--from', 'abc').code).toBe(EXIT.usage);
     expect(cli('--nope').code).toBe(EXIT.usage);
