@@ -161,6 +161,30 @@ describe('major bump against a git base (the Renovate PR case)', () => {
     expect(rules(repo(before, after), { base: 'HEAD' }).map(([r]) => r)).toEqual(['checksums']);
   });
 
+  const compose18Layout = (image: string): string =>
+    `services:\n  db:\n    image: ${image}\n    volumes:\n      - pgdata:/var/lib/postgresql\nvolumes:\n  pgdata:\n`;
+
+  it('18 -> 19 on the 18+ layout: bump names the entrypoint exit, no checksum warning', () => {
+    const d = repo(compose18Layout('postgres:18'), compose18Layout('postgres:19'));
+    const found = scan(d, { base: 'HEAD' }).findings;
+    expect(found.map((f) => [f.rule, f.severity])).toEqual([['major-bump', 'error']]);
+    expect(found[0]?.message).toContain('finds the 18 cluster in /var/lib/postgresql/18/docker and exits before initdb');
+    expect(found[0]?.message).not.toContain('FATAL');
+    expect(found[0]?.fix[0]).toContain('start the 19 image on a new, empty volume');
+  });
+
+  it('18 -> 19 with PGDATA pinned to the old path: the server FATAL, no checksum warning', () => {
+    const found = scan(repo(compose('postgres:18'), compose('postgres:19')), { base: 'HEAD' }).findings;
+    expect(found.map((f) => f.rule)).toEqual(['major-bump']);
+    expect(found[0]?.message).toContain('database files are incompatible with server');
+  });
+
+  it('17 -> 19 still warns about checksums and names 19 in the fix', () => {
+    const found = scan(repo(compose('postgres:17'), compose('postgres:19')), { base: 'HEAD' }).findings;
+    expect(found.map((f) => f.rule)).toEqual(['major-bump', 'checksums']);
+    expect(found[1]?.fix[1]).toContain('create the 19 cluster');
+  });
+
   it('same major on both sides is not a bump', () => {
     expect(rules(repo(compose('postgres:18.0'), compose('postgres:18.1')), { base: 'HEAD' })).toEqual([]);
   });

@@ -1,5 +1,6 @@
 import { posix } from 'node:path';
 import type { Finding, Mount, MountKind, PostgresTarget } from './model.js';
+import { LATEST_OFFICIAL_MAJOR } from './image.js';
 
 const OLD_DATA_PATH = '/var/lib/postgresql/data';
 const NEW_VOLUME_PATH = '/var/lib/postgresql';
@@ -53,10 +54,10 @@ function pgdataFixLine(t: PostgresTarget): string {
   }
 }
 
-function migrateSteps(previous: number | null): string[] {
+function migrateSteps(previous: number | null, major: number): string[] {
   const from = previous === null ? 'the old major' : String(previous);
   return [
-    `dump and restore: while the ${from} container still runs, \`pg_dumpall -U <user> > backup.sql\` inside it; start the 18 image on a new, empty volume; then \`psql -U <user> -f backup.sql\``,
+    `dump and restore: while the ${from} container still runs, \`pg_dumpall -U <user> > backup.sql\` inside it; start the ${major} image on a new, empty volume; then \`psql -U <user> -f backup.sql\``,
     'or run pg_upgrade in place with the pgautoupgrade/pgautoupgrade image (or tianon/postgres-upgrade) against a copy of the volume',
   ];
 }
@@ -153,17 +154,21 @@ export function evaluate(t: PostgresTarget): Finding[] {
       line: t.line,
       message:
         `This change moves ${t.name} from Postgres ${previous} to ${major} on an existing ${mount ? MOUNT_LABEL[mount.kind] : 'volume'}` +
-        `${mount?.source ? ` (${mount.source})` : ''}. Postgres ${major} cannot open data files written by ${previous}: ` +
-        '"FATAL: database files are incompatible with server". ' +
+        `${mount?.source ? ` (${mount.source})` : ''}. ` +
+        (previous >= 18 && defaultPgdata
+          ? `The ${major} entrypoint finds the ${previous} cluster in /var/lib/postgresql/${previous}/docker and exits before initdb ` +
+            '("Error: in 18+, these Docker images are configured to store database data in a format which is compatible with pg_ctlcluster ..."). '
+          : `Postgres ${major} cannot open data files written by ${previous}: "FATAL: database files are incompatible with server". `) +
         (onlyDump
           ? `There is a dump step (${t.upgradeStep ?? ''}); make sure a fresh dump is restored into a new, empty volume.`
           : 'No upgrade step was found next to it.'),
-      fix: migrateSteps(previous),
+      fix: migrateSteps(previous, major),
     });
   }
 
   const usesPgUpgrade = t.upgradeStep === null || /upgrade/i.test(t.upgradeStep);
-  if (bumped && holdsOldData && usesPgUpgrade && !hasChecksumChoice(t.initdbArgs)) {
+  // initdb turns checksums on by default from 18 on, so only an upgrade from 17 or older can hit the mismatch.
+  if (bumped && previous < 18 && holdsOldData && usesPgUpgrade && !hasChecksumChoice(t.initdbArgs)) {
     out.push({
       rule: 'checksums',
       severity: 'warning',
@@ -174,7 +179,7 @@ export function evaluate(t: PostgresTarget): Finding[] {
         'pg_upgrade then stops with "old cluster does not use data checksums but the new one does".',
       fix: [
         'check the old cluster first: `SHOW data_checksums;` (or run sql/preflight.sql)',
-        'if it says off, create the 18 cluster with POSTGRES_INITDB_ARGS="--no-data-checksums" (or enable checksums on the old one with pg_checksums --enable while it is stopped)',
+        `if it says off, create the ${major} cluster with POSTGRES_INITDB_ARGS="--no-data-checksums" (or enable checksums on the old one with pg_checksums --enable while it is stopped)`,
         'a dump/restore upgrade does not care about this setting',
       ],
     });
@@ -187,9 +192,9 @@ export function evaluate(t: PostgresTarget): Finding[] {
       ...where(t),
       line: t.line,
       message:
-        `${image.raw} follows the newest major, which has been 18 since PostgreSQL 18 came out in September 2025. A volume created before that holds 17 or older data, ` +
-        'and the next pull starts 18 on it.',
-      fix: ['pin the major you actually run, e.g. `postgres:17`, and upgrade on purpose'],
+        `${image.raw} follows the newest major, which has been ${LATEST_OFFICIAL_MAJOR} since the official image moved its latest tag on 20 November 2026. ` +
+        `A volume created before that holds ${LATEST_OFFICIAL_MAJOR - 1} or older data, and the next pull starts ${LATEST_OFFICIAL_MAJOR} on it.`,
+      fix: ['pin the major you actually run, e.g. `postgres:18`, and upgrade on purpose'],
     });
   }
 

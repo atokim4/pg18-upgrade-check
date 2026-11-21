@@ -22,7 +22,7 @@ export interface ImageInfo {
 }
 
 /** Major the floating `postgres:latest` tag points to (docker-library/official-images, 2026-11). */
-export const LATEST_OFFICIAL_MAJOR = 18;
+export const LATEST_OFFICIAL_MAJOR = 19;
 
 const OFFICIAL_FLOATING_TAGS = /^(latest|alpine[\d.]*|bookworm|bullseye|trixie)$/;
 

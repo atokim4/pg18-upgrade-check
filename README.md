@@ -44,7 +44,7 @@ Two things changed in Postgres 18 that a one-line tag bump does not handle:
 | `data-mount` | error | an 18+ official-layout image has a mount at `/var/lib/postgresql/data` and no `PGDATA` pinning it there |
 | `major-bump` | error | `--base`/`--from` shows the major went up on a persistent data volume, with no upgrade step next to it (`pgautoupgrade`, `tianon/postgres-upgrade`, `pg_upgrade`); a dump step only lowers it to a warning |
 | `checksums` | warning | a bump that will go through `pg_upgrade` and no explicit `--data-checksums`/`--no-data-checksums` in `POSTGRES_INITDB_ARGS` |
-| `floating-tag` | warning | `postgres`, `postgres:latest`, `postgres:alpine`... on a persistent volume: the next pull is 18 |
+| `floating-tag` | warning | `postgres`, `postgres:latest`, `postgres:alpine`... on a persistent volume: the next pull is 19 (`latest` moved to 19 on 2026-11-20) |
 | `pgdata-not-persisted` | warning | `PGDATA` is outside every data mount, so the data lands in an anonymous volume |
 | `skipped-image` | info | images with their own layout (bitnami, timescaledb-ha, supabase/postgres, CloudNativePG) |
 
@@ -155,7 +155,8 @@ scripts/upgrade-repro.sh /tmp/pgbin /tmp/pgwork | tee transcript.txt
 
 The servers run with `jit=off` because the fetch script leaves out the LLVM library.
 `transcripts/14-to-18.txt` is one full run (14.24 → 18.6, 12 million sample rows, 2 vCPUs).
-`transcripts/17-data-on-18.txt` shows an 18.7 server refusing a 17 data directory, and
+`transcripts/17-data-on-18.txt` shows an 18.7 server refusing a 17 data directory,
+`transcripts/18-data-on-19.txt` shows the postgres:19 entrypoint stopping on a volume that holds an 18 cluster, and
 `transcripts/renovate-scan-2026-11-13.md` is the tool run on 20 open Renovate "postgres to v18" PRs.
 
 ## Development
